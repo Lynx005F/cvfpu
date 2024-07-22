@@ -38,7 +38,7 @@ package fpnew_pkg;
   localparam int unsigned FP_FORMAT_BITS = $clog2(NUM_FP_FORMATS);
 
   // FP formats
-  typedef enum logic [FP_FORMAT_BITS-1:0] {
+  typedef enum logic [63:0] {
     FP32    = 'd0,
     FP64    = 'd1,
     FP16    = 'd2,
@@ -82,7 +82,7 @@ package fpnew_pkg;
   localparam int unsigned INT_FORMAT_BITS = $clog2(NUM_INT_FORMATS);
 
   // Int formats
-  typedef enum logic [INT_FORMAT_BITS-1:0] {
+  typedef enum logic [63:0] {
     INT8,
     INT16,
     INT32,
@@ -122,7 +122,7 @@ package fpnew_pkg;
 
   localparam int unsigned OP_BITS = 5;
 
-  typedef enum logic [OP_BITS-1:0] {
+  typedef enum logic [63:0] {
     FMADD, FNMSUB, ADD, MUL,     // ADDMUL operation group
     DIV, SQRT,                   // DIVSQRT operation group
     SGNJ, MINMAX, CMP, CLASSIFY, // NONCOMP operation group
@@ -143,7 +143,7 @@ package fpnew_pkg;
   // RISC-V FP-SPECIFIC
   // -------------------
   // Rounding modes
-  typedef enum logic [2:0] {
+  typedef enum logic [63:0] {
     RNE = 3'b000,
     RTZ = 3'b001,
     RDN = 3'b010,
