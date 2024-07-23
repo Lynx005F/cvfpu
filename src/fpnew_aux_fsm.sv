@@ -108,93 +108,37 @@ module fpnew_aux_fsm #(
   // Global FSM
   // ----------
 
-  // FSM states
-  typedef enum logic [1:0] {IDLE, BUSY, HOLD} fsm_state_e;
-  fsm_state_e state_q, state_d;
-
   // Input & Output Handshake
   logic fsm_in_valid, fsm_in_ready;
   logic fsm_out_valid, fsm_out_ready;
+  logic in_handshake, out_handshake;
 
-  logic fsm_busy;
+  // State for FSM
+  logic fsm_busy_d, fsm_busy_q;
 
   // Upstream Handshake Connection
   assign fsm_in_valid = in_valid[NUM_INP_REGS];
   assign in_ready[NUM_INP_REGS] = fsm_in_ready;
 
-  // FSM to safely apply and receive data from DIVSQRT unit
-  always_comb begin : flag_fsm
-    // Default assignments
-    fsm_out_valid = 1'b0;
-    fsm_in_ready  = 1'b0;
-    fsm_start_o   = 1'b0;
-    fsm_busy      = 1'b0;
-    state_d       = state_q;
+  // Assign Helper signals
+  assign in_handshake = fsm_in_valid & fsm_in_ready;
+  assign out_handshake = fsm_out_valid & fsm_out_ready;
 
-    unique case (state_q)
-      IDLE: begin
-        fsm_in_ready = 1'b1;
-        if (fsm_in_valid) begin
-          state_d = BUSY;
-          fsm_start_o = 1'b1;
+  // Same as normal pipeline stage, but additionally fsm_ready_i needs to be 1.
+  assign fsm_in_ready = fsm_ready_i & (fsm_out_ready | ~fsm_busy_q);
 
-          // Single Cycle Abort
-          if (fsm_ready_i) begin
-            fsm_out_valid = 1'b1;
-            if (fsm_out_ready) begin
-              state_d = IDLE;
-            end else begin
-              state_d = HOLD;
-            end
-          end
-        end
-      end
-      BUSY: begin
-        fsm_busy = 1'b1;
-        // If all active lanes are done send data down chain
-        if (fsm_ready_i) begin
-          fsm_out_valid = 1'b1;
-          if (fsm_out_ready) begin
-            fsm_in_ready = 1'b1;
-            if (fsm_in_valid) begin
-              state_d = BUSY;
-              fsm_start_o = 1'b1;
-            end else begin
-              state_d = IDLE;
-            end
-          end else begin
-            state_d = HOLD;
-          end
-        end
-      end
-      HOLD: begin
-        // Exact same as BUSY, but outer condition is already given
-        fsm_out_valid = 1'b1;
-        if (fsm_out_ready) begin
-          fsm_in_ready = 1'b1;
-          if (fsm_in_valid) begin
-            state_d = BUSY;
-            fsm_start_o = 1'b1;
-          end else begin
-            state_d = IDLE;
-          end
-        end else begin
-          state_d = HOLD;
-        end
-      end
+  // Start FSM on handshake
+  assign fsm_start_o = in_handshake;
 
-      // fall into idle state otherwise
-      default: state_d = IDLE;
-    endcase
+  // When we hold data and lanes are done/ready output it
+  assign fsm_out_valid = fsm_busy_q & fsm_ready_i;
 
-    // Flushing overrides the other actions
-    if (flush_i) begin
-      fsm_out_valid = 1'b0;
-      state_d = IDLE; 
-    end
-  end
+  // Change state if handshake are not the same
+  // In 1 Out 0 -> We have data now
+  // In 0 Out 1 -> Data is now gone
+  assign fsm_busy_d = (in_handshake == out_handshake) ? fsm_busy_q : in_handshake;
 
-  `FF(state_q, state_d, IDLE);
+  `FF(fsm_busy_q, fsm_busy_d, 1'b0);
 
   // ----------------
   // Data Holding FFs
@@ -264,6 +208,6 @@ module fpnew_aux_fsm #(
   assign out_valid_o     = out_valid      [NUM_OUT_REGS];
 
   // Assign output Flags: Busy if any element inside the pipe is valid
-  assign busy_o          = |in_valid | |out_valid | fsm_busy;
+  assign busy_o          = |in_valid | |out_valid | fsm_busy_q;
 
 endmodule
