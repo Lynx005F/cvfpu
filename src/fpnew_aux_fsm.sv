@@ -118,10 +118,6 @@ module fpnew_aux_fsm #(
 
   logic fsm_busy;
 
-  // Data holding signals
-  TagType                held_tag;
-  AuxType                held_aux;
-
   // Upstream Handshake Connection
   assign fsm_in_valid = in_valid[NUM_INP_REGS];
   assign in_ready[NUM_INP_REGS] = fsm_in_ready;
@@ -137,10 +133,20 @@ module fpnew_aux_fsm #(
 
     unique case (state_q)
       IDLE: begin
-        fsm_in_ready = '1;
+        fsm_in_ready = 1'b1;
         if (fsm_in_valid) begin
           state_d = BUSY;
           fsm_start_o = 1'b1;
+
+          // Single Cycle Abort
+          if (fsm_ready_i) begin
+            fsm_out_valid = 1'b1;
+            if (fsm_out_ready) begin
+              state_d = IDLE;
+            end else begin
+              state_d = HOLD;
+            end
+          end
         end
       end
       BUSY: begin
@@ -194,8 +200,16 @@ module fpnew_aux_fsm #(
   // Data Holding FFs
   // ----------------
 
+  // Data holding signals
+  TagType held_tag, fsm_out_tag;
+  AuxType held_aux, fsm_out_aux;
+
   `FFL(        held_tag,         in_tag[NUM_INP_REGS], fsm_start_o, TagType'('0));
   `FFL(        held_aux,         in_aux[NUM_INP_REGS], fsm_start_o, AuxType'('0));
+
+  // Bypass in case result gets used immediately
+  assign fsm_out_tag = fsm_start_o ?  in_tag[NUM_INP_REGS] : held_tag;
+  assign fsm_out_aux = fsm_start_o ?  in_aux[NUM_INP_REGS] : held_aux;
 
   // ---------------
   // Output pipeline
@@ -214,8 +228,8 @@ module fpnew_aux_fsm #(
   assign fsm_out_ready = out_ready[0];
 
   // Connect to Hold Register
-  assign out_tag        [0] = held_tag;
-  assign out_aux        [0] = held_aux;
+  assign out_tag        [0] = fsm_out_tag;
+  assign out_aux        [0] = fsm_out_aux;
 
   // Generate the register stages
   for (genvar i = 0; i < NUM_OUT_REGS; i++) begin : gen_output_pipeline

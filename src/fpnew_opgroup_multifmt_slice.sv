@@ -172,52 +172,34 @@ or on 16b inputs producing 32b outputs");
 
   logic fsm_start, fsm_ready;
   logic [NUM_LANES-1:0] lane_fsm_ready;
-  assign fsm_ready = &lane_fsm_ready;
-
-  if (OpGroup == fpnew_pkg::DIVSQRT) begin: gen_fsm_aux
-    fpnew_aux_fsm #(
-      .NumPipeRegs( NumPipeRegs          ),
-      .PipeConfig ( PipeConfig           ),
-      .TagType    ( TagType              ),
-      .AuxType    ( logic [AUX_BITS-1:0] )
-    ) i_aux_fsm (
-      .clk_i,
-      .rst_ni,
-      .tag_i,
-      .aux_i          ( in_aux     ),
-      .in_valid_i,
-      .in_ready_o,
-      .flush_i,
-      .tag_o,
-      .aux_o          ( out_aux    ),
-      .out_valid_o,
-      .out_ready_i,
-      .busy_o,
-      .reg_enable_o   ( reg_enable ),
-      .fsm_start_o    ( fsm_start  ),
-      .fsm_ready_i    ( fsm_ready  )
-    );
-  end else begin: gen_direct_aux
-    fpnew_aux #(
-      .NumPipeRegs( NumPipeRegs          ),
-      .TagType    ( TagType              ),
-      .AuxType    ( logic [AUX_BITS-1:0] )
-    ) i_aux (
-      .clk_i,
-      .rst_ni,
-      .tag_i,
-      .aux_i        ( in_aux     ),
-      .in_valid_i,
-      .in_ready_o,
-      .flush_i,
-      .tag_o,
-      .aux_o        ( out_aux    ),
-      .out_valid_o,
-      .out_ready_i,
-      .busy_o,
-      .reg_enable_o ( reg_enable )
-    );
+  if (OpGroup == fpnew_pkg::DIVSQRT) begin: collect_fsm_ready
+    assign fsm_ready = &lane_fsm_ready;
+  end else begin: no_fsm_ready
+    assign fsm_ready = 1'b1;
   end
+
+  fpnew_aux_fsm #(
+    .NumPipeRegs( NumPipeRegs          ),
+    .PipeConfig ( PipeConfig           ),
+    .TagType    ( TagType              ),
+    .AuxType    ( logic [AUX_BITS-1:0] )
+  ) i_aux_fsm (
+    .clk_i,
+    .rst_ni,
+    .tag_i,
+    .aux_i          ( in_aux     ),
+    .in_valid_i,
+    .in_ready_o,
+    .flush_i,
+    .tag_o,
+    .aux_o          ( out_aux    ),
+    .out_valid_o,
+    .out_ready_i,
+    .busy_o,
+    .reg_enable_o   ( reg_enable ),
+    .fsm_start_o    ( fsm_start  ),
+    .fsm_ready_i    ( fsm_ready  )
+  );
 
   // ---------------
   // Generate Lanes
