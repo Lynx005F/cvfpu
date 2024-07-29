@@ -327,11 +327,12 @@ package fpnew_pkg;
 
   // Different kinds of Redundancy that might be used
   typedef enum logic [2:0] {
-    NONE,       // No redundancy module is generated - redundancy can not be enabled
-    TMR_FAST,   // Operands will be tripplicated in time - if nothing goes wrong output after 2 cycles (longer critical path)
-    TMR_SMALL,  // Operands will be tripplicated in time - always output after 3 cycles (shorter critical path)
-    DMR,        // Operands will be duplicated in time and are retried on failure
-    DMR_INORDER // Operands will be duplicated in time and are retried on failure - always keeps the order of outputs the same
+    NONE,        // No redundancy module is generated - redundancy can not be enabled
+    TMR_FAST,    // Operands will be tripplicated in time - if nothing goes wrong output after 2 cycles (longer critical path)
+    TMR_SMALL,   // Operands will be tripplicated in time - always output after 3 cycles (shorter critical path)
+    DMR,         // Operands will be duplicated in time and are retried on failure
+    DMR_INORDER, // Operands will be duplicated in time and are retried on failure - always keeps the order of outputs the same
+    TMR_TINY     // Operands will be tripplicated in time, storage is deferred to handshake (might cause stalls)
   } redundancy_type_t;
 
   // FPU configuration: redundancy

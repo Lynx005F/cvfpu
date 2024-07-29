@@ -83,8 +83,13 @@ module fpnew_top #(
     $clog2(MAX_DELAY) +
     // In case of a TMR approach we add extra ID Bits for the Division since it can take up to 12 cycles
     // For DMR this is not needed as we stall the unit instead
-    ((RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST || RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL) 
-      && fpnew_pkg::division_enabled(Implementation.UnitTypes)
+    (
+      (
+        RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST  || 
+        RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL || 
+        RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_TINY 
+      ) && 
+      fpnew_pkg::division_enabled(Implementation.UnitTypes)
     ) ? 4 : 0
   );
 
@@ -162,7 +167,11 @@ module fpnew_top #(
     // Stall Handshake when a division is going on and DMR is enabled
     logic division_stall;
 
-    if (RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST || RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL) begin: gen_no_division_stall
+    if (
+      RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST  || 
+      RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL ||
+      RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_TINY
+    ) begin: gen_no_division_stall
       assign division_stall = 0;
     end else begin: gen_division_stall
       logic division_busy_q;
@@ -206,11 +215,16 @@ module fpnew_top #(
     assign retry_ready = fpnew_pkg::DONT_CARE;
     assign retry_replacement_id = fpnew_pkg::DONT_CARE;
 
-  end else if (RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST || RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL) begin: gen_in_tmr
+  end else if (
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST  || 
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL ||
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_TINY
+  ) begin: gen_in_tmr
     time_TMR_start #(
-        .DataType           ( tmr_in_stacked_t                         ),
-        .IDSize             ( ID_SIZE                                  ),
-        .InternalRedundancy ( RedundancyFeatures.TripplicateRepetition )
+        .DataType           ( tmr_in_stacked_t                                                   ),
+        .IDSize             ( ID_SIZE                                                            ),
+        .InternalRedundancy ( RedundancyFeatures.TripplicateRepetition                           ),
+        .EarlyReadyEnable   ( (RedundancyFeatures.RedundancyType != fpnew_pkg::TMR_TINY) ? 1 : 0 )
     ) i_time_TMR_start (
         .clk_i,
         .rst_ni,
@@ -274,7 +288,8 @@ module fpnew_top #(
         .DataType           ( tmr_in_stacked_t                         ),
         .IDSize             ( ID_SIZE                                  ),
         .InternalRedundancy ( RedundancyFeatures.TripplicateRepetition ),
-        .UseExternalId      ( 1                                        )
+        .UseExternalId      ( 1                                        ),
+        .EarlyReadyEnable   ( 1                                        ) // Low area overhead, always enable (If retry gets it as feature remove here)
     ) i_time_DMR_start (
         .clk_i,
         .rst_ni,
@@ -439,7 +454,11 @@ module fpnew_top #(
     assign retry_valid = fpnew_pkg::DONT_CARE;
     assign retry_lock = fpnew_pkg::DONT_CARE;
 
-  end else if (RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST || RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL) begin : gen_out_tmr
+  end else if (
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_FAST  || 
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_SMALL || 
+    RedundancyFeatures.RedundancyType == fpnew_pkg::TMR_TINY
+  ) begin : gen_out_tmr
     time_TMR_end #(
         .DataType           ( tmr_out_stacked_t                                                  ),
         .LockTimeout        ( LOCK_TIMEOUT                                                       ),
