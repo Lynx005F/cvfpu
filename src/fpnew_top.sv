@@ -36,7 +36,6 @@ module fpnew_top #(
   input logic                               clk_i,
   input logic                               rst_ni,
   input logic [31:0]                        hart_id_i,
-  input logic                               redundancy_enable_i,
   // Input signals
   input logic [NUM_OPERANDS-1:0][WIDTH-1:0] operands_i,
   input fpnew_pkg::roundmode_e              rnd_mode_i,
@@ -60,9 +59,11 @@ module fpnew_top #(
   output logic                              out_valid_o,
   input  logic                              out_ready_i,
   // Indication of valid data in flight
-  output logic                              busy_o,
-  output logic                              fault_detected_o
+  output logic                              busy_o
 );
+  
+  logic redundancy_enable_i, fault_detected_o;
+  assign redundancy_enable_i = 1'b1;
 
   localparam int unsigned NUM_OPGROUPS = fpnew_pkg::NUM_OPGROUPS;
   localparam int unsigned NUM_FORMATS  = fpnew_pkg::NUM_FP_FORMATS;
