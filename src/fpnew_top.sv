@@ -310,8 +310,8 @@ module fpnew_top #(
   logic [NUM_OPGROUPS-1:0] in_opgrp_ready, out_opgrp_valid, out_opgrp_ready, out_opgrp_ext, opgrp_busy;
   rr_stacked_t [NUM_OPGROUPS-1:0] out_opgrp_data;
 
-  localparam int REP = RedundancyFeatures.TripplicateRepetition ? 3 : 1;
-  logic [REP-1:0] out_rr_lock;
+  localparam int LockRepetition = RedundancyFeatures.TripplicateRepetition ? 3 : 1;
+  logic [LockRepetition-1:0] out_rr_lock;
 
   logic [NUM_FORMATS-1:0][NUM_OPERANDS-1:0] is_boxed;
 
@@ -372,7 +372,8 @@ module fpnew_top #(
       .TagType       ( submodules_stacked_t            ),
       .TrueSIMDClass ( TrueSIMDClass                   ),
       .CompressedVecCmpResult ( CompressedVecCmpResult ),
-      .StochasticRndImplementation ( StochasticRndImplementation )
+      .StochasticRndImplementation ( StochasticRndImplementation ),
+      .LockRepetition (LockRepetition)
     ) i_opgroup_block (
       .clk_i,
       .rst_ni,
@@ -412,6 +413,11 @@ module fpnew_top #(
   logic out_redundant_valid, out_redundant_ready;
   rr_stacked_t out_redundant_data;
 
+  logic [LockRepetition-1:0] flush;
+  for (genvar r = 0; r < LockRepetition; r++) begin: gen_rr_flush
+    assign flush[r] = flush_i;
+  end
+
   // Round-Robin arbiter to decide which result to use
   rr_arb_tree_lock #(
     .NumIn              (                             NUM_OPGROUPS ),
@@ -422,7 +428,7 @@ module fpnew_top #(
   ) i_arbiter (
     .clk_i,
     .rst_ni,
-    .flush_i,
+    .flush_i   ( flush                   ),
     .rr_i      ( '0                      ),
     .lock_rr_i ( out_rr_lock             ),
     .req_i     ( out_opgrp_valid         ),
