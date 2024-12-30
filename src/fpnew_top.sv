@@ -99,7 +99,7 @@ module fpnew_top #(
   );  
 
   // We have an extra bit for DMR methods to do error detection
-  localparam int unsigned ID_SIZE = ID_SIZE_BASE + (DTR_ENABLED ? 3 : 0);
+  localparam int unsigned ID_SIZE = ID_SIZE_BASE + (DTR_ENABLED ? 1 : 0);
 
   // ----------------
   // Type Definition
